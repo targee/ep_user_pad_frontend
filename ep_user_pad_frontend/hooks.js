@@ -466,18 +466,26 @@ exports.expressCreateServer = function (hook_name, args, cb) {
                     var msg = eMailAuth.registrationtext;
                     msg = msg.replace(/<url>/, user.location + "confirm/" + consString);
                     var message = {
-                        text: msg,
+                        html: msg,
                         from: eMailAuth.registrationfrom,
                         to: user.email + " <" + user.email + ">",
                         subject: eMailAuth.registrationsubject
                     };
 
                     var nodemailer = require('nodemailer');
-                    var transport = nodemailer.createTransport("sendmail");
-                    if (eMailAuth.smtp == "false")
+                    if (eMailAuth.smtp == "false") {
+                        var transport = nodemailer.createTransport("sendmail");
                         transport.sendMail(message);
+                    }
                     else {
-                        emailserver.send(message, function (err) {
+                        var transport = nodemailer.createTransport({
+                        service: 'gmail',
+                        auth: {
+                                user: eMailAuth.user,
+                                pass: eMailAuth.password
+                            }
+                        });
+                        transport.sendMail(message, function (err) {
                             if (err) {
                                 log('error', err);
                             }
@@ -773,7 +781,15 @@ exports.expressCreateServer = function (hook_name, args, cb) {
                 transport.sendMail(message);
             }
             else {
-                emailserver.send(message, function (err) {
+                var nodemailer = require('nodemailer');
+                var transport = nodemailer.createTransport({
+                    service: 'gmail',
+                    auth: {
+                            user: eMailAuth.user,
+                            pass: eMailAuth.password
+                        }
+                    });
+                    transport.sendMail(message, function (err) {
                     if (err) {
                         log('error', err);
                     }
@@ -784,6 +800,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
             getOneValueSql(existGroupSql, [userID, groupID], function (found) {
                 if (found) {
                     sendError('One ore more user are already in Group', res);
+                    return;
                 } else {
                     var sqlInsert = "INSERT INTO UserGroup Values(?,?,2)";
                     var insertQuery = connection.query(sqlInsert, [userID, groupID]);
@@ -816,7 +833,15 @@ exports.expressCreateServer = function (hook_name, args, cb) {
                 transport.sendMail(message);
             }
             else {
-                emailserver.send(message, function (err) {
+                var nodemailer = require('nodemailer');
+                var transport = nodemailer.createTransport({
+                    service: 'gmail',
+                    auth: {
+                            user: eMailAuth.user,
+                            pass: eMailAuth.password
+                        }
+                    });
+                    transport.sendMail(message, function (err) {
                     if (err) {
                         log('error', err);
                     }
@@ -826,6 +851,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
             getOneValueSql(existGroupSql, [email, groupID], function (found) {
                 if (found) {
                     sendError('One ore more user are already Invited to this Group', res);
+                    return;
                 } else {
                     var sqlInsert = "INSERT INTO NotRegisteredUsersGroups Values(?,?)";
                     var insertQuery = connection2.query(sqlInsert, [email, groupID]);
@@ -863,6 +889,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
                     getAllSql(isOwnerSql, [req.session.userId, fields.groupID], function (userGroup) {
                         if (!(userGroup[0].Role == 1)) {
                             sendError('User is not Owner can not send Invitations', res);
+                            return;
                         } else {
                             var data = {};
                             data.success = true;
@@ -958,7 +985,15 @@ exports.expressCreateServer = function (hook_name, args, cb) {
                                 transport.sendMail(message);
                             }
                             else {
-                                emailserver.send(message, function (err) {
+                                var nodemailer = require('nodemailer');
+                                var transport = nodemailer.createTransport({
+                                    service: 'gmail',
+                                    auth: {
+                                            user: eMailAuth.user,
+                                            pass: eMailAuth.password
+                                        }
+                                    });
+                                    transport.sendMail(message, function (err) {
                                     if (err) {
                                         log('error', err);
                                     }
@@ -1205,6 +1240,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
                             });
                         } else {
                             sendError('User not in Group', res);
+                            return;
                         }
                     });
 
@@ -1508,6 +1544,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
                     getOneValueSql(existPadInGroupSql, [fields.groupId, fields.padName], function (found) {
                         if (found || (fields.padName.length == 0)) {
                             sendError('Pad already Exists', res);
+                            return;
                         } else {
                             var addPadToGroupSql = "INSERT INTO GroupPads VALUES(?, ?)";
                             var addPadToGroupQuery = connection.query(addPadToGroupSql, [fields.groupId, fields.padName]);
@@ -1545,6 +1582,7 @@ exports.expressCreateServer = function (hook_name, args, cb) {
                     getAllSql(isOwnerSql, [req.session.userId, fields.groupId], function (userGroup) {
                         if (!(userGroup[0].Role == 1)) {
                             sendError('User is not owner! Can not delete Pad', res);
+                            return;
                         } else {
                             getEtherpadGroupFromNormalGroup(fields.groupId, function () {
                                 var deletePadSql = "DELETE FROM GroupPads WHERE GroupPads.PadName = ? and GroupPads.GroupID = ?";
@@ -1583,9 +1621,11 @@ exports.expressCreateServer = function (hook_name, args, cb) {
                     getAllSql(isOwnerSql, [req.session.userId, fields.groupId], function (userGroup) {
                         if (!userGroup) {
                             sendError('You are not in this Group.', res);
+                            return;
                         }
                         if (!(userGroup[0].Role == 1)) {
                             sendError('User is not Owner. Can not delete Group', res);
+                            return;
                         } else {
                             var deleteGroupSql = "DELETE FROM Groups WHERE Groups.groupID = ?";
                             var deleteGroupQuery = connection.query(deleteGroupSql, [fields.groupId]);
